@@ -1,0 +1,147 @@
+include "../../core/prelude.scase"
+
+# todo: fix bugs
+
+syntax_err:
+    reason, span -> span |> println! reason |> error;
+
+pprimary:
+    p, { "@"      span _ }, t -> { "@"      span ? }, t
+    p, { "?"      span _ }, t -> { "?"      span ? }, t
+    p, { "number" span n }, t -> { "number" span n }, t
+    p, { "string" span s }, t -> { "string" span s }, t
+    p, { "ident"  span i }, t -> { "ident"  span i }, t
+    p, { "("      span _ }, t -> { p span (p, t) |> pexpr } |> _group
+    p, { tk       span _ }, _ ->
+        { p span "expected expression, found `" ++ tk ++ "`" } |> syntax_err;
+
+_group:
+    { _ start, _   thing (")", (_, span_rest), _), t } ->
+        ({ "group" { start span_rest } thing }), t
+    { p start, _   thing t                           } ->
+        ("unclosed `(`", start, start + 1, path) |> syntax_err;
+
+_in:
+    tk, x, xs | tk = x -> @
+    tk, x, xs          -> (tk, xs) |> _in
+    tk, x              -> tk = x;
+
+new_binary: f, tks, t -> (f, tks, t |> f) |> _binary |> snd |> snd;
+
+_binary:
+    f, tks, lhs, (op, op_span, _), t | (op, tks) |> _in -> (
+        f, tks, op,
+        lhs |> get_span |> fst, lhs,
+        op_span, t |> f
+    ) |> __binary
+    lhs, t -> lhs, t;
+__binary:
+    f, tks, op, start, lhs, op_span, rhs, t -> (
+        f, tks,
+        (("binary", start, rhs |> get_span |> snd), op, op_span, lhs, rhs), t
+    ) |> _binary; 
+
+get_span: (_, span), _ -> span;
+
+pappl:     t -> (pprimary,  "|>",             t) |> new_binary;
+
+pterm:     t -> (pappl,     ("*", "/", "%"),  t) |> new_binary;
+
+padditive: t -> (pterm,     ("+", "-", "++"), t) |> new_binary;
+
+pcompare:  t -> (padditive, (">", "<", "="),  t) |> new_binary;
+
+pbang:     t -> (pcons,     "!",              t) |> new_binary;
+
+pcons:
+    t -> t |> pcompare |> _pcons;
+_pcons:
+    lhs, (",", op_span), t ->
+        (lhs, lhs |> get_span |> fst, op_span, t |> pcons) |> __pcons
+    lhs, t -> lhs, t;
+__pcons:
+    lhs, start, op_span, rhs, t ->
+        (("binary", start, rhs |> get_span |> snd), ",", op_span, lhs, rhs), t;
+
+pexpr: tokens -> tokens |> pbang;
+
+pprimarypat:
+    ("@",      span, _), t -> (("@",      span), ?), t
+    ("_",      span, _), t -> (("_",      span), ?), t
+    ("?",      span, _), t -> (("?",      span), ?), t
+    ("number", span, n), t -> (("number", span), n), t
+    ("string", span, s), t -> (("string", span), s), t
+    ("ident",  span, i), t -> (("ident",  span), i), t
+    ("(",      span, _), t -> (span, t |> ppat) |> _group
+    (tk,       span, _), _ ->
+        ("expected pattern, found `" ++ tk ++ "`", span) |> syntax_err;
+
+pconspat:
+    t -> t |> pprimarypat |> _pconspat;
+_pconspat:
+    lhs, (",", op_span), t ->
+        (lhs, lhs |> get_span |> fst, op_span, t |> pconspat) |> __pconspat
+    lhs, t -> lhs, t;
+__pconspat:
+    lhs, start, op_span, rhs, t ->
+        (("cons", start, rhs |> get_span |> snd), ",", op_span, lhs, rhs), t;
+
+ppat: t -> t |> pconspat;
+
+pcase: t -> t |> ppat |> _pcase;
+_pcase:
+    pat, ("|", _), t -> (pat, t |> pexpr) |> __pcase
+    pat, t           -> (pat, ?),    t;
+__pcase:
+    pat, expr, t     -> (pat, expr), t;
+
+pbranch: t -> t |> pcase |> _pbranch;
+_pbranch:
+    case, ("->", _),  t -> (case, t |> pexpr) |> __pbranch
+    _,    (tk, span), _ ->
+        ("expected `->`, found `" ++ tk ++ "`", span) |> syntax_err;
+__pbranch: case, expr, t -> (case, expr), t;
+
+pdef:
+    ("ident", (name_start, name_end, path), name), (":", _),       t ->
+        (path, name, (name_start, name_end, path), t |> pbranch) |> _pdef
+    ("ident", _),               (tk,  span, _), t ->
+        ("expected `:`, found `" ++ tk ++ "`", span) |> syntax_err
+    (tk,       span,     _),                    _ ->
+        ("expected identifier, found `" ++ tk ++ "`", span) |> syntax_err;
+_pdef:
+    path, name, name_span, branch, t ->
+        (path, name, name_span, (branch, ?), t) |> __pdef;
+__pdef:
+    path, name, name_span, acc, (";", _), t ->
+        (name, name_span, acc |> reverse), t
+    path, name, name_span, acc, t ->
+        (path, name, name_span, acc, t |> pbranch) |> ___pdef;
+___pdef:
+    path, name, name_span, acc, branch, t ->
+        (path, name, name_span, (branch, acc), t) |> __pdef;
+
+pprogram: t -> (?, t) |> _pprogram;
+_pprogram:
+    acc, ("include", _), ("string", str_span, str), t ->
+         ((("include", str_span, str), acc), t) |> _pprogram
+    acc, ("include", _), (tk,       tk_span,  _),   _ -> (
+        "expected string after `include` keyword, found `" ++
+        tk ++ "`", tk_span
+    ) |> syntax_err
+    acc, ("eof",     _), ? -> acc
+    acc, t                 -> (acc, t |> pdef) |> __pprogram;
+__pprogram:
+    acc, def, t -> ((("def", def), acc), t) |> _pprogram;
+
+print_expr:
+    ("number", _), n    -> n   |> print
+    ("string", _), s    -> s   |> inspect |> print
+    ("@",      _), _    -> "@" |> print
+    ("?",      _), _    -> "?" |> print
+    ("ident",  _), i    -> i   |> print
+    ("group",  _), expr -> "(" |> print! expr |> print_expr! ")" |> print
+    ("binary", _), op, _, lhs, rhs ->
+        "(" |> print! op |> print! " " |> print!
+        lhs |> print_expr! " " |> print! rhs |> print_expr!
+        ")" |> print;

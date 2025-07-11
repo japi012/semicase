@@ -1,0 +1,150 @@
+include "../../core/prelude.scase"
+
+main:
+    file, _ -> file |> .read_file |> unwrap |> lex_print;
+
+lex_token:
+    { loc c, rest } | c |> is_space -> { loc + 1 rest } |> lex_token
+
+    { loc "#", rest } ->
+        ({ loc rest } |> lex_comment) |> lex_token
+
+    { loc c, rest } | c |> is_digit ->
+        { loc "" loc c, rest } |> lex_number
+
+    { loc "\"", rest } ->
+        { loc "" loc rest } |> lex_string
+
+    # Double character tokens
+    { loc "+", "+", rest } -> { 2 "++" loc rest } |> make_token
+    { loc "-", ">", rest } -> { 2 "->" loc rest } |> make_token
+    { loc "|", ">", rest } -> { 2 "|>" loc rest } |> make_token
+    { loc "<", "-", rest } -> { 2 "<-" loc rest } |> make_token
+
+    # Single character tokens
+    { loc "?", rest } -> { 1 "?" loc rest } |> make_token
+    { loc "@", rest } -> { 1 "@" loc rest } |> make_token
+    { loc "(", rest } -> { 1 "(" loc rest } |> make_token
+    { loc ")", rest } -> { 1 ")" loc rest } |> make_token
+    { loc "+", rest } -> { 1 "+" loc rest } |> make_token
+    { loc "-", rest } -> { 1 "-" loc rest } |> make_token
+    { loc "*", rest } -> { 1 "*" loc rest } |> make_token
+    { loc "/", rest } -> { 1 "/" loc rest } |> make_token
+    { loc "%", rest } -> { 1 "%" loc rest } |> make_token
+    { loc ">", rest } -> { 1 ">" loc rest } |> make_token
+    { loc "<", rest } -> { 1 "<" loc rest } |> make_token
+    { loc "=", rest } -> { 1 "=" loc rest } |> make_token
+    { loc "|", rest } -> { 1 "|" loc rest } |> make_token
+    { loc ",", rest } -> { 1 "," loc rest } |> make_token
+    { loc ":", rest } -> { 1 ":" loc rest } |> make_token
+    { loc ";", rest } -> { 1 ";" loc rest } |> make_token
+    { loc "!", rest } -> { 1 "!" loc rest } |> make_token
+
+    # End of file
+    { loc ? } -> { 0 "eof" loc ? } |> make_token
+
+    # Identifiers and keywords
+    { loc c, rest } ->
+        { loc "" loc c, rest } |> lex_ident;
+
+lex_number:
+    { start acc loc c, rest } | c |> is_digit ->
+        { start acc ++ c loc + 1 rest } |> lex_number
+    { start acc loc rest } ->
+        { "number" start loc acc |> parse }, { loc rest };
+
+lex_string:
+    { start acc loc "\\", c, rest } ->
+        { start acc ++ c |> escape loc + 2 rest } |> lex_string
+    { start acc loc "\"", rest } ->
+        { "string" start loc acc }, { loc rest }
+    { start acc loc c, rest } ->
+        { start acc ++ c loc + 1 rest } |> lex_string
+    { start acc loc ? } ->
+        { "string" start loc acc }, { loc rest };
+
+lex_comment:
+    { loc "\n", rest } -> { loc + 1 rest }
+    { loc _,    rest } -> { loc + 1 rest } |> lex_comment;
+
+escape:
+    "\"" -> "\""
+    "\\" -> "\\"
+    "t"  -> "\t"
+    "n"  -> "\n"
+    "r"  -> "\r"
+    _    -> "";
+
+lex_ident:
+    { start acc loc c, rest } | c |> is_ident ->
+        { start acc ++ c loc + 1 rest } |> lex_ident
+    { start acc loc rest } ->
+        { acc |> key_token start loc acc }, { loc rest };
+
+key_token:
+    "_"       -> "_"
+    "include" -> "include"
+    "let"     -> "let"
+    _         -> "ident";
+
+make_token:
+    { n token loc rest } ->
+        { token loc loc + n }, { loc + n rest };
+
+lex_all:
+    source -> (?, { 0 source |> split }) |> _lex_all;
+_lex_all:
+    { acc state } -> { acc state |> lex_token } |> __lex_all;
+__lex_all:
+    { acc { { "eof" :r } state } } -> { { "eof" } ++ r acc } |> reverse
+    { acc { token state } }         -> { token, acc state } |> _lex_all;
+
+lex_print:
+    source ->
+        { 0 source |> split } |> lex_token |> _lex_print;
+_lex_print:
+    { "eof" :r }, _ -> ?#({ "eof" } ++ r) |> println
+    token, state ->
+#        token |> println!
+        state |> lex_token |> _lex_print;
+
+is_digit:
+    "0" -> @
+    "1" -> @
+    "2" -> @
+    "3" -> @
+    "4" -> @
+    "5" -> @
+    "6" -> @
+    "7" -> @
+    "8" -> @
+    "9" -> @
+    _   -> ?;
+
+is_space:
+    " "  -> @
+    "\t" -> @
+    "\n" -> @
+    "\r" -> @
+    _    -> ?;
+
+is_ident:
+    "?" -> ?
+    "@" -> ?
+    "(" -> ?
+    ")" -> ?
+    "+" -> ?
+    "-" -> ?
+    "*" -> ?
+    "/" -> ?
+    "%" -> ?
+    ">" -> ?
+    "<" -> ?
+    "=" -> ?
+    "|" -> ?
+    "," -> ?
+    ":" -> ?
+    ";" -> ?
+    "!" -> ?
+    c | c |> is_space -> ?
+    _   -> @;

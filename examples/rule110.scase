@@ -1,0 +1,33 @@
+include "../core/prelude.scase"
+
+put:
+    { "#" "#" "#" } -> " "
+    { "#" "#" " " } -> "#"
+    { "#" " " "#" } -> "#"
+    { "#" " " " " } -> " "
+    { " " "#" "#" } -> "#"
+    { " " "#" " " } -> "#"
+    { " " " " "#" } -> "#"
+    { " " " " " " } -> " ";
+
+gen_rule:
+    a, b, ? -> { a b "#" } |> put, ?
+    a, b, c, rest ->
+        { a b c } |> put, (b, c, rest) |> gen_rule;
+
+do:
+    0, _    -> ?
+    n, rule ->
+        rule |> print_rule!
+        (n - 1, ("#", rule) |> gen_rule) |> do;
+
+print_rule:
+    x, ?  -> x |> print! "#" |> println
+    x, xs -> x |> print!  xs |> print_rule;
+
+rule110:
+    n -> (n, (n, " ") |> replicate) |> do;
+
+main:
+    ?    -> "please provide a number"|> println
+    x, _ -> x |> parse |> rule110;

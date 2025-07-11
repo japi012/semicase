@@ -1,0 +1,8 @@
+include "../../core/prelude.scase"
+include "lexer.scase"
+include "parser.scase"
+
+main:
+    file, _ ->
+        (file |> .read_file |> unwrap)
+        |> lex_all |> inspect |> println;

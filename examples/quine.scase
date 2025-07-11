@@ -1,0 +1,41 @@
+include "../core/prelude.scase"
+
+main:
+    _ ->
+"include \"core/prelude.scase\"
+
+main:
+    _ ->
+\"$\" |> prepare |> quine |> println;
+
+prepare: s -> { s \"\" s |> split };
+
+quine:
+    { s acc c, rest } | 36 |> char = c ->
+        { s acc ++ (\"\", s |> split) |> escape rest } |> quine
+    { s acc c, rest } ->
+        { s acc ++ c rest } |> quine
+    { _ acc ? } ->
+        acc;
+
+escape:
+    acc, \"\\\"\", rest -> (acc ++ \"\\\\\\\"\", rest) |> escape
+    acc, \"\\\\\", rest -> (acc ++ \"\\\\\\\\\", rest) |> escape
+    acc, c, rest -> (acc ++ c, rest) |> escape
+    acc, ? -> acc;" |> prepare |> quine |> println;
+
+prepare: s -> { s "" s |> split };
+
+quine:
+    { s acc c, rest } | 36 |> char = c ->
+        { s acc ++ ("", s |> split) |> escape rest } |> quine
+    { s acc c, rest } ->
+        { s acc ++ c rest } |> quine
+    { _ acc ? } ->
+        acc;
+
+escape:
+    acc, "\"", rest -> (acc ++ "\\\"", rest) |> escape
+    acc, "\\", rest -> (acc ++ "\\\\", rest) |> escape
+    acc, c, rest -> (acc ++ c, rest) |> escape
+    acc, ? -> acc;
