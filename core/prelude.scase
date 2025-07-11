@@ -1,0 +1,98 @@
+include "list.scase"
+
+# |-------------|
+# |    Pairs    |
+# |-------------|
+
+fst: x, _ -> x;
+snd: _, x -> x;
+
+# |----------------|
+# |    Booleans    |
+# |----------------|
+
+not:
+    ? -> @
+    _ -> ?;
+
+or:
+    ?, ? -> ?
+    _, _ -> @;
+
+nor:
+    ?, ? -> @
+    _, _ -> ?;
+
+and:
+    ?, _ -> ?
+    _, ? -> ?
+    _, _ -> @;
+
+nand:
+    ?, _ -> @
+    _, ? -> @
+    _, _ -> ?;
+
+# |------------------------|
+# |    Input and output    |
+# |------------------------|
+
+print: v -> v |> .print;
+
+println: v ->
+    v |> print!
+    "\n" |> print;
+
+read_all: _ -> ? |> .read_all;
+
+# |-----------------|
+# |    Debugging    |
+# |-----------------|
+
+error: v -> v |> .error;
+
+inspect: v -> v |> .inspect;
+
+todo: v -> "TODO: not implemented yet: " ++ v |> inspect |> error;
+
+# |---------------|
+# |    Strings    |
+# |---------------|
+
+split: s -> s |> .split;
+
+split_indices:
+    s -> s |> split |> enumerate;
+
+index: v -> v |> .index |> _index;
+_index:
+    ? -> ?, ?
+    s -> @, s;
+
+bytes: s -> s |> .bytes;
+
+ord: s -> s |> bytes |> first;
+
+parse:
+    s ->
+        (_parse, (1, 0), s |> split)
+        |> rfold
+        |> snd;
+_parse:
+    s, base, n ->
+        base * 10, n + base *
+        (s |> ord |> unwrap - 48);
+
+char: n -> n |> .char;
+
+# |-------------------------|
+# |    Result operations    |
+# |-------------------------|
+
+unwrap:
+    @, x -> x
+    ?, e -> ("unwrap error: " ++ e |> inspect) |> error;
+
+replace:
+    f, @, x -> x |> f
+    _,    e -> e;

@@ -1,0 +1,92 @@
+# Overview file
+
+# |--------------|
+# |    Basics    |
+# |--------------|
+
+# semicase is a minimalistic functional programming language
+# designed to have a small core and be easy to implement while
+# still remaining powerful.
+
+# Every program in semicase is made up of functions. Every
+# function in semicase takes only one argument. The syntax for
+# defining a function looks like this:
+
+fact:
+    0 -> 1
+    n -> n * (n - 1) |> fact;
+
+# When a function runs, it'll run each pattern on its argument
+# until one matches, and then will run the expression
+# associated with that argument. If no patterns match, an
+# error is returned.
+
+# semicase has no function call syntax, and relies on the `|>`
+# operator to execute functions. `a |> f` is the same as
+# `f(a)` in C-like languages.
+
+# |-------------|
+# |    Types    |
+# |-------------|
+
+# semicase's type system is very simple. It only has 6 types.
+
+# Numbers   - 64-bit floating point numbers
+# Strings   - arrays of characters
+# Functions - functions
+# Void      - `?`, the only false-y value
+# Unit      - `@`, the counterpart to `?`
+# Pair      - a pair of two values
+
+# Using these types, semicase is able to represent any data
+# structure.
+
+# |------------------------|
+# |    Binary operators    |
+# |------------------------|
+
+# Binary operators allow semicase to compute things and build
+# all expressions in the language, except for literals.
+
+# `a + b` -> add two numbers
+# `a - b` -> subtract two numbers
+# `a * b` -> multiply two numbers
+# `a / b` -> divide two numbers
+# `a % b` -> mod two numbers
+
+# `a < b` -> check if a number is less than another
+# `a > b` -> check if a number is greater than another
+# `a = b` -> check if something is equal to something else
+
+# `a ++ b` -> concatenate two strings
+
+# `a |> b` -> run function `b` with argument `a`
+# `a , b` -> construct a pair `(a, b)`
+# `a ! b` -> returns `b`
+
+# Expressions in semicase are just these binary expressions
+# and literals, there are no further constructs.
+
+# |-------------|
+# |    Lists    |
+# |-------------|
+
+# A list in semicase looks like this:
+
+# 1, 2, 3, 4, 5, ?
+
+# Because the comma operator is right associative, it binds
+# like this:
+
+# (1, (2, (3, (4, (5, ?))
+
+# A list is either `?`, or a pair of a value and another list.
+# Using this information, we can create a simple function that
+# sums up all of the elements of a list.
+
+sum:
+    ? -> ?
+    x, xs -> x + xs |> sum;
+
+# Read the "std.scase" file for more examples of scase and the
+# standard definitions usually included in every program. 

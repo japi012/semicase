@@ -1,0 +1,84 @@
+### core/list
+
+##! Lists are one of the most fundemental objects in semicase, they represent
+##! ordered sequences of items. A list is either `?` representing the empty
+##! list, or a pair of an element and another list.
+
+##! Because these lists are implemented as linked lists, operations done at
+##! the front of the list are faster than the end of the list. 
+
+## Takes a tuple of elements, and returns a list of those elements.
+list:
+    { x :xs } -> x, xs |> list
+    {}        -> ?;
+
+## Takes a list and a function, and applies that function to each element of
+## the list.
+map:
+    _, ?       -> ?
+    f, (x, xs) -> x |> f, (f, xs) |> map;
+
+## Takes a list and a function, and removes each element where the function
+## applied that element returns `?`.
+filter:
+    _,    ?                 -> ?
+    pred, x, xs | x |> pred -> x, (pred, xs) |> filter
+    pred, x, xs             ->    (pred, xs) |> filter;
+
+## Takes a number `n` and a value, and makes a list of length `n` with only
+## that value.
+replicate:
+    0, _ -> ?
+    n, x -> x, (n - 1, x) |> replicate;
+
+## Takes a list, and reverse it.
+reverse:
+    xs -> (xs, ?) |> reverse_suffix;
+
+## Takes a list and a suffix, and reverses the list, appending the suffix to
+## the end of the list. 
+reverse_suffix:
+    ?,       acc -> acc
+    (x, xs), acc -> (xs, x, acc) |> reverse_suffix;
+
+lfold:
+    _, acc, ?     -> acc
+    f, acc, x, xs -> (f, (acc, x) |> f, xs) |> lfold;
+
+rfold:
+    _, acc, ?     -> acc
+    f, acc, x, xs -> (x, (f, acc, xs) |> rfold) |> f;
+
+## Takes a list, and returns a result containing its first element if it
+## exists.
+first:
+    x, _ -> @, x
+    ?    -> ?, ?;
+
+## Takes a list, and replaces each element with a pair containing the
+## element's index, and the element itself. 
+enumerate:
+    l -> (0, l) |> enumerate_start;
+
+## Takes a number `n` and list, and replaces each element of the list with a
+## pair containing the element's index + `n`, and the element itself.
+enumerate_start:
+    n, ?     -> ?
+    n, x, xs -> (n, x), (n + 1, xs) |> enumerate_start;
+
+## Takes a list, and returns a string version of it.
+strlist:
+    ?    -> "[]"
+    list -> "[" ++ list |> _strlist;
+_strlist:
+    x, ?  -> x |> inspect ++ "]"
+    x, xs -> x |> inspect ++ ", " ++ xs |> _strlist;
+
+## Takes a list, and returns string version of it, with tabs!
+tstrlist:
+    ?    -> "[]"
+    list -> "[\n" ++ list |> _tstrlist;
+_tstrlist:
+    x, ?  -> "\t" ++ x |> inspect ++ "\n]"
+    x, xs ->
+        "\t" ++ x |> inspect ++ ",\n" ++ xs |> _tstrlist;
