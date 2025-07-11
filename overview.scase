@@ -36,7 +36,7 @@ fact:
 # Functions - functions
 # Void      - `?`, the only false-y value
 # Unit      - `@`, the counterpart to `?`
-# Pair      - a pair of two values
+# Object    - an array of values
 
 # Using these types, semicase is able to represent any data
 # structure.
@@ -61,7 +61,7 @@ fact:
 # `a ++ b` -> concatenate two strings
 
 # `a |> b` -> run function `b` with argument `a`
-# `a , b` -> construct a pair `(a, b)`
+# `a , b` -> construct a pair `(a, b)` (object of size two)
 # `a ! b` -> returns `b`
 
 # Expressions in semicase are just these binary expressions
