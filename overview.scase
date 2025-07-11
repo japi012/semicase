@@ -88,5 +88,6 @@ sum:
     ? -> ?
     x, xs -> x + xs |> sum;
 
-# Read the "std.scase" file for more examples of scase and the
-# standard definitions usually included in every program. 
+# Read the files in the "core" module for more examples of scase and the
+# standard definitions usually included in every program, and check out "examples"
+# for   well   examples.
