@@ -2,7 +2,7 @@ include "../core/prelude.scase"
 
 main:
     _ ->
-"include \"core/prelude.scase\"
+"include \"../core/prelude.scase\"
 
 main:
     _ ->
